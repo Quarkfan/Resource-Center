@@ -177,7 +177,13 @@ export function buildApp(o: {
               tenantId: z.string(),
               sections: z.record(z.string(), z.unknown()),
               logs: z
-                .array(z.object({ name: z.string(), content: z.string() }))
+                .array(
+                  z.object({
+                    name: z.string().min(1).max(200),
+                    content: z.string().max(200_000),
+                  }),
+                )
+                .max(50)
                 .optional(),
             })
             .parse(req.body),

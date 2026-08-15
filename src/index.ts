@@ -1,13 +1,14 @@
 import { buildApp } from "./app.js";
 import { MemoryResourceRepository } from "./repository.js";
 import { PgResourceRepository } from "./pg-repository.js";
+import { requireInternalServiceToken } from "./config.js";
 const repo = process.env.DATABASE_URL
   ? new PgResourceRepository(process.env.DATABASE_URL)
   : new MemoryResourceRepository();
 await repo.migrate();
 await buildApp({
   repository: repo,
-  internalToken: process.env.INTERNAL_SERVICE_TOKEN ?? "development-only",
+  internalToken: requireInternalServiceToken(),
   root: process.env.RESOURCE_ROOT ?? "./data",
   ffmpeg: process.env.FFMPEG_PATH ?? "ffmpeg",
   ffprobe: process.env.FFPROBE_PATH ?? "ffprobe",

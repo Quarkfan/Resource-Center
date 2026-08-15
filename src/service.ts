@@ -369,6 +369,14 @@ export class ResourceService {
     sections: Record<string, unknown>;
     logs?: Array<{ name: string; content: string }>;
   }) {
+    const redactText = (value: string) =>
+      value
+        .replace(/Bearer\s+[A-Za-z0-9._~-]+/gi, "Bearer [REDACTED]")
+        .replace(
+          /((?:api[-_]?key|token|secret|password|passwd|cookie|credential)\s*["']?\s*[:=]\s*["']?)[^"',;\s}]+/gi,
+          "$1[REDACTED]",
+        )
+        .replace(/\bsk-[A-Za-z0-9_-]{16,}\b/g, "[REDACTED]");
     const safe = (v: unknown): unknown =>
       Array.isArray(v)
         ? v.map(safe)
@@ -383,7 +391,9 @@ export class ResourceService {
                   : safe(x),
               ]),
             )
-          : v;
+          : typeof v === "string"
+            ? redactText(v)
+            : v;
     const out = join(this.root, "diagnostics", `${randomUUID()}.zip`);
     await new Promise<void>((resolve, reject) => {
       const output = createWriteStream(out, { mode: 0o600 }),
@@ -395,7 +405,7 @@ export class ResourceService {
         name: "system.json",
       });
       for (const l of i.logs ?? [])
-        zip.append(String(safe(l.content)), {
+        zip.append(redactText(l.content), {
           name: `logs/${l.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`,
         });
       void zip.finalize();

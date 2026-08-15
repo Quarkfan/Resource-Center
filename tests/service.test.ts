@@ -1,6 +1,7 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { strFromU8, unzipSync } from "fflate";
 import { afterEach, describe, expect, it } from "vitest";
 import { MemoryResourceRepository } from "../src/repository.js";
 import { ResourceService, type ProcessRunner } from "../src/service.js";
@@ -356,10 +357,27 @@ describe("Resource Center", () => {
       result = await s.diagnostics({
         tenantId: "t1",
         sections: { config: { apiKey: "secret", safe: "yes" } },
-        logs: [{ name: "app.log", content: "Bearer abcdef" }],
-      });
+        logs: [
+          {
+            name: "app.log",
+            content:
+              'Bearer abcdef apiKey="another-secret" provider=sk-abcdefghijklmnop',
+          },
+        ],
+      }),
+      archive = unzipSync(
+        new Uint8Array((await s.read(result.item.id, "t1")).data),
+      ),
+      system = strFromU8(archive["system.json"]!),
+      log = strFromU8(archive["logs/app.log"]!);
     expect(result.item.mediaType).toBe("application/zip");
     expect(result.item.size).toBeGreaterThan(0);
+    expect(system).toContain('"apiKey": "[REDACTED]"');
+    expect(system).not.toContain('"apiKey": "secret"');
+    expect(log).toContain("Bearer [REDACTED]");
+    expect(log).toContain('apiKey="[REDACTED]"');
+    expect(log).not.toContain("another-secret");
+    expect(log).not.toContain("sk-abcdefghijklmnop");
   });
 });
 
