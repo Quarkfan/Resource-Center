@@ -1,3 +1,3 @@
 # Resource Center Status
 
-Version `0.1.0` is deployed. Content-addressed resources, tenant/Bot ACL, freshness, integrity repair, cleanup plans, diagnostics ZIP, artifacts and governed FFmpeg/ffprobe jobs are implemented. Media execution uses structured argument builders and bounded worker concurrency.
+Version `0.1.0` is deployed. Content-addressed resources, tenant/Bot ACL, freshness, integrity repair, cleanup plans, diagnostics ZIP, artifacts and governed FFmpeg/ffprobe jobs are implemented. Media execution uses structured argument builders and bounded worker concurrency. Diagnostic input is bounded and redacts structured secrets plus common secret forms inside text before ZIP creation. Startup requires a strong internal token; 12 tests, typecheck and production build pass.
