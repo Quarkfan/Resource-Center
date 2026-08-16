@@ -36,5 +36,14 @@ describe("resource extension lifecycle", () => {
       "disabled",
     );
     expect(await restored.logs("resource-provider.test")).toHaveLength(3);
+
+    expect((await restored.probe("resource-provider.test")).status).toBe(
+      "ready",
+    );
+    await restored.transition("resource-provider.test", "verified");
+    expect(restored.get("resource-provider.test").lifecycleState).toBe(
+      "verified",
+    );
+    expect(await restored.logs("resource-provider.test")).toHaveLength(6);
   });
 });

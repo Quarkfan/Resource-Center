@@ -241,9 +241,7 @@ export class ExtensionCatalog {
   private async performProbe(id: string) {
     const record = this.record(id);
     const probe: ExtensionProbe = {
-      status: ["active", "canary", "verified"].includes(record.lifecycleState)
-        ? "ready"
-        : "unavailable",
+      status: record.lifecycleState === "retired" ? "unavailable" : "ready",
       checkedAt: now(),
       reason: record.lifecycleState,
     };
