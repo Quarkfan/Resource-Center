@@ -57,6 +57,43 @@ export function buildApp(o: {
     return reply.code(r ? 200 : 503).send(ok({ ready: r }, req.id));
   });
   app.get("/version", async (req) => ok({ version: "0.1.0" }, req.id));
+  app.get("/v1/extensions", async (req) => ok(s.extensions.list(), req.id));
+  app.get("/v1/extensions/:id", async (req) =>
+    ok(
+      s.extensions.get(z.object({ id: z.string() }).parse(req.params).id),
+      req.id,
+    ),
+  );
+  app.post("/v1/extensions/:id/probe", async (req) =>
+    ok(
+      s.extensions.probe(z.object({ id: z.string() }).parse(req.params).id),
+      req.id,
+    ),
+  );
+  app.post("/v1/extensions/:id/lifecycle/:state", async (req) => {
+    const { id, state } = z
+      .object({
+        id: z.string(),
+        state: z.enum([
+          "installed",
+          "verified",
+          "canary",
+          "active",
+          "draining",
+          "disabled",
+          "failed",
+          "retired",
+        ]),
+      })
+      .parse(req.params);
+    return ok(s.extensions.transition(id, state), req.id);
+  });
+  app.get("/v1/extensions/:id/logs", async (req) =>
+    ok(
+      s.extensions.logs(z.object({ id: z.string() }).parse(req.params).id),
+      req.id,
+    ),
+  );
   app.post("/v1/resources", async (req, reply) => {
     const file = await req.file();
     if (!file) return reply.code(400).send(fail("File required", req.id));

@@ -6,6 +6,7 @@ import { spawn } from "node:child_process";
 import archiver from "archiver";
 import type { ResourceRepository } from "./repository.js";
 import type { MediaJob, ResourceItem, ResourceKind } from "./types.js";
+import { resourceExtensions } from "./extensions.js";
 const now = () => new Date().toISOString();
 export interface ProcessRunner {
   run(
@@ -83,6 +84,7 @@ export interface MediaRequest {
   params: Record<string, unknown>;
 }
 export class ResourceService {
+  readonly extensions = resourceExtensions;
   private readonly active = new Map<string, AbortController>();
   private readonly workers = new Set<Promise<void>>();
   private draining = false;
@@ -143,6 +145,7 @@ export class ResourceService {
     metadata?: Record<string, unknown>;
     expiresAt?: string;
   }) {
+    this.extensions.require("resource-backend.local-fs");
     const sha256 = createHash("sha256").update(i.data).digest("hex"),
       old = await this.repo.byHash(i.tenantId, sha256, i.kind);
     if (old) {
@@ -369,6 +372,7 @@ export class ResourceService {
     sections: Record<string, unknown>;
     logs?: Array<{ name: string; content: string }>;
   }) {
+    this.extensions.require("resource-processor.diagnostics-zip");
     const redactText = (value: string) =>
       value
         .replace(/Bearer\s+[A-Za-z0-9._~-]+/gi, "Bearer [REDACTED]")
@@ -664,6 +668,7 @@ export class ResourceService {
     }
   }
   async enqueueMedia(i: MediaRequest) {
+    this.extensions.require("resource-processor.ffmpeg");
     const resources = await this.resolveInputs(i.tenantId, i.inputIds);
     const extension = extname(i.outputName).toLowerCase();
     const output = join(
