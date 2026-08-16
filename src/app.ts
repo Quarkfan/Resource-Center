@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { ResourceRepository } from "./repository.js";
 import { ResourceService, type ProcessRunner } from "./service.js";
+import type { ExtensionStateRepository } from "./extensions.js";
 const ok = (data: unknown, id: string) => ({ ok: true, data, requestId: id }),
   fail = (message: string, id: string) => ({
     ok: false,
@@ -28,6 +29,7 @@ export function buildApp(o: {
   ffprobe?: string;
   runner?: ProcessRunner;
   mediaConcurrency?: number;
+  extensionRepository?: ExtensionStateRepository;
 }) {
   const app = Fastify({ logger: false, genReqId: () => randomUUID() }),
     s = new ResourceService(
@@ -37,7 +39,10 @@ export function buildApp(o: {
       o.runner,
       o.ffprobe,
       o.mediaConcurrency,
+      o.extensionRepository,
     );
+  app.addHook("onReady", async () => s.extensions.initialize());
+  app.addHook("onClose", async () => s.extensions.close());
   void app.register(multipart, {
     limits: { fileSize: 512 * 1024 * 1024, files: 1 },
   });
@@ -66,7 +71,9 @@ export function buildApp(o: {
   );
   app.post("/v1/extensions/:id/probe", async (req) =>
     ok(
-      s.extensions.probe(z.object({ id: z.string() }).parse(req.params).id),
+      await s.extensions.probe(
+        z.object({ id: z.string() }).parse(req.params).id,
+      ),
       req.id,
     ),
   );
@@ -86,11 +93,13 @@ export function buildApp(o: {
         ]),
       })
       .parse(req.params);
-    return ok(s.extensions.transition(id, state), req.id);
+    return ok(await s.extensions.transition(id, state), req.id);
   });
   app.get("/v1/extensions/:id/logs", async (req) =>
     ok(
-      s.extensions.logs(z.object({ id: z.string() }).parse(req.params).id),
+      await s.extensions.logs(
+        z.object({ id: z.string() }).parse(req.params).id,
+      ),
       req.id,
     ),
   );

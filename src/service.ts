@@ -6,7 +6,10 @@ import { spawn } from "node:child_process";
 import archiver from "archiver";
 import type { ResourceRepository } from "./repository.js";
 import type { MediaJob, ResourceItem, ResourceKind } from "./types.js";
-import { resourceExtensions } from "./extensions.js";
+import {
+  createResourceExtensions,
+  type ExtensionStateRepository,
+} from "./extensions.js";
 const now = () => new Date().toISOString();
 export interface ProcessRunner {
   run(
@@ -84,7 +87,7 @@ export interface MediaRequest {
   params: Record<string, unknown>;
 }
 export class ResourceService {
-  readonly extensions = resourceExtensions;
+  readonly extensions;
   private readonly active = new Map<string, AbortController>();
   private readonly workers = new Set<Promise<void>>();
   private draining = false;
@@ -97,7 +100,10 @@ export class ResourceService {
     readonly runner: ProcessRunner = new SpawnRunner(),
     readonly ffprobe = "ffprobe",
     readonly mediaConcurrency = 1,
-  ) {}
+    extensionRepository?: ExtensionStateRepository,
+  ) {
+    this.extensions = createResourceExtensions(extensionRepository);
+  }
   async init() {
     await mkdir(join(this.root, "objects"), { recursive: true });
     await mkdir(join(this.root, "tmp"), { recursive: true });
